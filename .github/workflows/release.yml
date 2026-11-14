@@ -1,0 +1,44 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 类型检查
+        run: npm run typecheck
+
+      - name: 单元测试
+        run: npm test
+
+      - name: 构建单文件 ESM
+        run: npm run build
+
+      - name: 生成校验文件
+        run: sha256sum index.mjs asg-plugin.json > SHA256SUMS
+
+      - name: 发布 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            index.mjs asg-plugin.json SHA256SUMS \
+            --title "agent-search-gateway-plugin-weibo ${GITHUB_REF_NAME}" \
+            --generate-notes

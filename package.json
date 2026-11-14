@@ -1,0 +1,19 @@
+{
+  "name": "agent-search-gateway-plugin-weibo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "asg 插件：微博取件 + 搜索源（OpenCLI）",
+  "license": "MIT",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "test": "npm run build && vitest run && node --test test/build.test.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "weibo",
+  "name": "Weibo",
+  "version": "0.1.0",
+  "api_version": 1,
+  "provides": ["search", "fetch"],
+  "entry": "index.mjs",
+  "description": "微博插件：帖子/评论/用户/时间段取件，以及 weibo / weibo_hot 搜索源"
+}
