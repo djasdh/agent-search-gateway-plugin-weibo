@@ -11,9 +11,14 @@
 ## 安装
 
 ```bash
-asg extensions install djasdh/agent-search-gateway-plugin-weibo@0.1.0
+asg extensions install djasdh/agent-search-gateway-plugin-weibo@0.2.0
 asg extensions list
 ```
+
+Release 同时提供两份 manifest：
+
+- `asg-extension.json`（`api_version: 2`）：agent-search-gateway **0.3.9+** 优先使用；
+- `asg-plugin.json`（`api_version: 1`）：保留给 **0.3.8 及更早**版本。
 
 运行依赖 **OpenCLI**（`opencli`）：
 
@@ -22,7 +27,40 @@ npm install -g @jackwener/opencli
 opencli doctor
 ```
 
-启用配置：
+### 配置（0.3.9+，V2）
+
+插件私有配置写在 `gateway.yaml` 的 `extensions.weibo.config`：
+
+```yaml
+extensions:
+  weibo:
+    config:
+      enabled: true
+      cli:
+        command: opencli
+        timeout_ms: 30000
+      search:
+        enabled: true      # 启用 weibo / weibo_hot 搜索源
+        category: weibo
+        hot_category: weibo_hot
+```
+
+也可以用 CLI 修改：
+
+```bash
+asg extensions config weibo --set enabled=true
+asg extensions config weibo --set search.enabled=true
+asg extensions config weibo --describe
+```
+
+旧配置由 0.3.x 迁移脚本自动搬到新位置：
+
+| 旧位置 | 新位置 |
+| --- | --- |
+| `weibo` | `extensions.weibo.config` |
+| `search.weibo` | `extensions.weibo.config.search` |
+
+0.3.8 及更早仍使用旧顶层段：
 
 ```yaml
 weibo:
@@ -33,10 +71,13 @@ weibo:
 
 search:
   weibo:
-    enabled: true      # 启用 weibo / weibo_hot 搜索源
+    enabled: true
     category: weibo
     hot_category: weibo_hot
 ```
+
+插件在运行期把 `ctx.settings.weibo`（V1）与 `ctx.pluginConfig`（V2）深合并，`pluginConfig` 优先；
+两份都为空时视为未配置，取件返回明确错误而不是回退到部分默认值。
 
 ## 取件能力（`fetch`）
 
@@ -76,10 +117,11 @@ npm run typecheck  # tsc --noEmit
 
 ## 发版
 
-1. 同步修改 `asg-plugin.json` 与 `package.json` 的版本号。
-2. `git tag v0.1.0 && git push origin v0.1.0`。
+1. 同步修改 `asg-extension.json`、`asg-plugin.json` 与 `package.json` 的版本号。
+2. `git tag v0.2.0 && git push origin v0.2.0`。
 3. GitHub Actions 执行 `npm ci` / `npm run typecheck` / `npm test` / `npm run build`，
-   生成 `SHA256SUMS` 并创建 Release（`index.mjs`、`asg-plugin.json`、`SHA256SUMS`）。
+   生成 `SHA256SUMS` 并创建 Release（`index.mjs`、`asg-extension.json`、
+   `asg-plugin.json`、`SHA256SUMS`）。
 
 ## 发现
 

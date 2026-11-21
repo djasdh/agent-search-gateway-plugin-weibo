@@ -1,6 +1,6 @@
 {
   "name": "agent-search-gateway-plugin-weibo",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "asg 插件：微博取件 + 搜索源（OpenCLI）",

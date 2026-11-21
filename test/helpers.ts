@@ -104,7 +104,11 @@ export function makeWeibo(overrides: Partial<WeiboSettings> = {}): WeiboSettings
   };
 }
 
-export function makeContext(cli: string, overrides: Partial<WeiboSettings> = {}): FetchPluginContext {
+export function makeContext(
+  cli: string,
+  overrides: Partial<WeiboSettings> = {},
+  pluginConfig?: Record<string, unknown>,
+): FetchPluginContext {
   return {
     settings: {
       fetch: { timeout_ms: 15000, max_bytes: 5 * 1024 * 1024, user_agent: "" },
@@ -115,6 +119,61 @@ export function makeContext(cli: string, overrides: Partial<WeiboSettings> = {})
     },
     secrets: { bilibili: { http: { token: "" } } },
     getSecret: () => undefined,
+    ...(pluginConfig ? { pluginConfig } : {}),
+  };
+}
+
+/** V2 宿主：只有 `pluginConfig`，没有 `settings.weibo`。 */
+export function makePluginContext(
+  pluginConfig: Record<string, unknown>,
+  options: { userAgent?: string } = {},
+): FetchPluginContext {
+  return {
+    settings: {
+      fetch: {
+        timeout_ms: 15000,
+        max_bytes: 5 * 1024 * 1024,
+        user_agent: options.userAgent ?? "",
+      },
+    },
+    secrets: { bilibili: { http: { token: "" } } },
+    getSecret: () => undefined,
+    pluginConfig,
+  };
+}
+
+/** V2 `extensions.weibo.config` 的完整形态（与 config_schema 默认值一致）。 */
+export function makeWeiboConfig(
+  cli: string,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    ...makeWeibo({ cli: { command: cli, timeout_ms: 5000 } }),
+    ...overrides,
+  };
+}
+
+/** V2 `extensions.weibo.config`：取件 + 搜索完整配置。 */
+export function makeEngineConfig(
+  command: string,
+  overrides: {
+    enabled?: boolean;
+    searchEnabled?: boolean;
+    search?: Record<string, unknown>;
+  } = {},
+): Record<string, unknown> {
+  return {
+    enabled: overrides.enabled ?? true,
+    cli: { command, timeout_ms: 5000 },
+    search: {
+      enabled: overrides.searchEnabled ?? true,
+      category: "weibo",
+      hot_category: "weibo_hot",
+      timeout_ms: 5000,
+      cache_ttl_ms: 0,
+      retry: 0,
+      ...overrides.search,
+    },
   };
 }
 
@@ -123,6 +182,7 @@ export function makeEngineContext(overrides: {
   searchWeiboEnabled?: boolean;
   weiboEnabled?: boolean;
   command?: string;
+  pluginConfig?: Record<string, unknown>;
 } = {}): EngineProviderContext {
   return {
     config: {
@@ -142,5 +202,11 @@ export function makeEngineContext(overrides: {
       },
     },
     secrets: {},
+    ...(overrides.pluginConfig ? { pluginConfig: overrides.pluginConfig } : {}),
   };
+}
+
+/** V2 宿主：只有 `pluginConfig`，没有旧 `config.weibo` / `config.search.weibo`。 */
+export function makeV2EngineContext(pluginConfig: Record<string, unknown>): EngineProviderContext {
+  return { config: {}, secrets: {}, pluginConfig };
 }

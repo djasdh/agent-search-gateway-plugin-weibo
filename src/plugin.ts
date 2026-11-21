@@ -4,6 +4,7 @@ import type { WeiboSettings } from "./sdk/settings.js";
 import type { Logger } from "./sdk/logger.js";
 import type { FetchPlugin, FetchPluginContext, FetchPluginResult } from "./sdk/fetch-plugin.js";
 import { WEIBO_OPENCLI } from "./sdk/channels.js";
+import { resolveWeiboConfig } from "./config.js";
 import { normalizePostRows, runOpencli } from "./cli.js";
 import { downloadWeiboImage } from "./images.js";
 import {
@@ -463,15 +464,27 @@ const textResult = (body: string, contentType: string, finalUrl: string): FetchP
 });
 
 async function fetchWeibo(url: URL, ctx: FetchPluginContext): Promise<FetchPluginResult> {
-  const { settings, logger } = ctx;
-  const weibo = settings.weibo;
+  const { logger } = ctx;
+  const { empty, config: weibo } = resolveWeiboConfig(ctx.settings.weibo, ctx.pluginConfig);
+
+  if (empty) {
+    return fail(
+      new WeiboError(
+        "WEIBO_UNAVAILABLE",
+        "微博插件未配置（缺少 weibo 或 extensions.weibo.config）",
+        url.toString(),
+      ),
+    );
+  }
+
+  const userAgent = ctx.settings.fetch?.user_agent ?? "";
 
   if (isWeiboImageUrl(url)) {
     if (!weibo.enabled || !weibo.images.enabled) {
       return fail(new WeiboError("WEIBO_UNAVAILABLE", "微博图片抓取未启用（weibo.enabled/weibo.images.enabled=false）", url.toString()));
     }
     try {
-      const image = await downloadWeiboImage(url, weibo, settings.fetch.user_agent, logger);
+      const image = await downloadWeiboImage(url, weibo, userAgent, logger);
       return {
         ok: true,
         status: 200,
@@ -534,7 +547,13 @@ export const weiboPlugin: FetchPlugin = {
   ],
   // 纯 URL 匹配；开关统一由 enabled 过滤，禁用后回退通用抓取。
   match: (url) => isWeiboImageUrl(url) || (isWeiboUrl(url) && url.searchParams.has("weibo")),
-  enabled: (ctx) => ctx.settings.weibo.enabled,
-  available: (ctx) => ctx.settings.weibo.cli.command.trim().length > 0,
+  enabled: (ctx) => {
+    const { empty, config } = resolveWeiboConfig(ctx.settings.weibo, ctx.pluginConfig);
+    return !empty && config.enabled === true;
+  },
+  available: (ctx) => {
+    const { empty, config } = resolveWeiboConfig(ctx.settings.weibo, ctx.pluginConfig);
+    return !empty && config.cli.command.trim().length > 0;
+  },
   fetch: fetchWeibo,
 };

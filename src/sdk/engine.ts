@@ -12,10 +12,14 @@ export type EngineKind = "searxng" | "gateway";
 export type EngineGroup = "searxng" | "gateway.reverse_image" | "gateway.search";
 
 export interface EngineProviderContext {
-  /** 与 gateway.yaml 同形的配置切片。 */
+  /** 与 gateway.yaml 同形的配置切片（V1 宿主）。 */
   config: Record<string, unknown>;
   /** 与 secrets.yaml 同形的密钥切片。 */
   secrets: Record<string, unknown>;
+  /** 第三方 search 插件的私有配置（V2 `extensions.<id>.config`，已补默认值）。 */
+  pluginConfig?: Readonly<Record<string, unknown>>;
+  /** 第三方 search 插件密钥（V2 `extensions.<id>.<name>`，空值不注入）。 */
+  pluginSecrets?: Record<string, string>;
   logger?: Logger;
 }
 

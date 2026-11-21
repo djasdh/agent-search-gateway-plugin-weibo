@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { engine } from "../src/index.js";
-import { makeEngineContext } from "./helpers.js";
+import {
+  FAKE_SEARCH_CLI,
+  makeEngineConfig,
+  makeEngineContext,
+  makeV2EngineContext,
+  writeCli,
+} from "./helpers.js";
 
 const runtime = engine.runtime;
 
@@ -38,5 +44,62 @@ describe("runtime.plan", () => {
   it("类别不命中返回 undefined", () => {
     expect(runtime.plan("it", makeEngineContext())).toBeUndefined();
     expect(runtime.plan(undefined, makeEngineContext())).toBeUndefined();
+  });
+});
+
+describe("V1 ctx.config", () => {
+  it("只有旧 ctx.config 时 search 行为不变", async () => {
+    const cli = writeCli(FAKE_SEARCH_CLI);
+    const ctx = makeEngineContext({ command: cli });
+    const result = await runtime.search("洛天依", { hot: false, limit: 2 }, ctx);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.results[0]?.engine).toBe("weibo");
+    expect(result.results).toHaveLength(2);
+  });
+});
+
+describe("V2 pluginConfig", () => {
+  it("只有 pluginConfig 时 enabled/available/routing/plan/search 正常", async () => {
+    const cli = writeCli(FAKE_SEARCH_CLI);
+    const ctx = makeV2EngineContext(makeEngineConfig(cli));
+
+    expect(engine.available(ctx)).toBe(true);
+    expect(engine.enabled?.(ctx)).toBe(true);
+    expect(engine.routing(ctx)).toEqual(["category:weibo", "category:weibo_hot"]);
+    expect(runtime.plan("weibo", ctx)).toEqual({ hot: false });
+    expect(runtime.plan("weibo_hot", ctx)).toEqual({ hot: true });
+
+    const result = await runtime.search("洛天依", { hot: false, limit: 2 }, ctx);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.results[0]?.url).toBe("https://weibo.com/5146173015/R1");
+  });
+
+  it("pluginConfig 的 enabled / search.enabled / cli.command 控制开关", () => {
+    const cli = writeCli(FAKE_SEARCH_CLI);
+    expect(engine.available(makeV2EngineContext(makeEngineConfig(cli, { enabled: false })))).toBe(false);
+    expect(engine.enabled?.(makeV2EngineContext(makeEngineConfig(cli, { searchEnabled: false })))).toBe(false);
+    expect(
+      engine.available(makeV2EngineContext({ ...makeEngineConfig(cli), cli: { command: "" } })),
+    ).toBe(false);
+  });
+
+  it("局部 pluginConfig 与旧 config 深合并：pluginConfig 优先", async () => {
+    const cli = writeCli(FAKE_SEARCH_CLI);
+    const ctx = makeEngineContext({
+      command: "/nonexistent-opencli",
+      searchWeiboEnabled: false,
+      pluginConfig: { cli: { command: cli }, search: { enabled: true } },
+    });
+
+    // cli.command 来自 pluginConfig；enabled 来自 legacy config.weibo。
+    expect(engine.available(ctx)).toBe(true);
+    expect(engine.enabled?.(ctx)).toBe(true);
+
+    const result = await runtime.search("洛天依", { hot: false, limit: 1 }, ctx);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.results).toHaveLength(1);
   });
 });

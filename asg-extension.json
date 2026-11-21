@@ -1,0 +1,238 @@
+{
+  "id": "weibo",
+  "name": "Weibo",
+  "version": "0.2.0",
+  "api_version": 2,
+  "description": "微博插件：帖子/评论/用户/时间段取件，以及 weibo / weibo_hot 搜索源",
+  "provides": ["search", "fetch"],
+  "entry": "index.mjs",
+  "fetch_channels": [
+    {
+      "id": "weibo:opencli",
+      "name": "OpenCLI",
+      "description": "通过本地 OpenCLI（浏览器桥）抓取微博",
+      "kind": "cli",
+      "capabilities": ["post", "comments", "user", "user-posts", "image"],
+      "aliases": ["opencli", "weibo"]
+    }
+  ],
+  "search_engines": [
+    {
+      "id": "gateway.search:weibo",
+      "name": "微博",
+      "description": "微博帖子搜索与热搜（OpenCLI）"
+    }
+  ],
+  "config_schema": {
+    "type": "object",
+    "description": "微博取件与搜索配置（extensions.weibo.config）",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "default": false,
+        "description": "是否启用微博取件；禁用后回退通用抓取"
+      },
+      "cli": {
+        "type": "object",
+        "description": "OpenCLI 命令配置",
+        "additionalProperties": false,
+        "default": { "command": "opencli", "timeout_ms": 30000 },
+        "properties": {
+          "command": {
+            "type": "string",
+            "default": "opencli",
+            "description": "opencli 可执行文件（显式空串表示不可用）"
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 30000,
+            "description": "单次命令超时（毫秒）"
+          }
+        }
+      },
+      "defaults": {
+        "type": "object",
+        "description": "各动作的默认条数",
+        "additionalProperties": false,
+        "default": { "comments_limit": 20, "user_posts_limit": 100 },
+        "properties": {
+          "comments_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 20,
+            "description": "评论默认条数"
+          },
+          "user_posts_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 100,
+            "description": "用户微博单次默认条数（OpenCLI 上限 100）"
+          }
+        }
+      },
+      "user_posts": {
+        "type": "object",
+        "description": "时间段抓取预算",
+        "additionalProperties": false,
+        "default": {
+          "default_days": 7,
+          "max_days": 90,
+          "max_items": 500,
+          "max_calls": 30,
+          "budget_ms": 120000,
+          "max_chars": 500
+        },
+        "properties": {
+          "default_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 90,
+            "default": 7,
+            "description": "未给 start/end/days 时的默认天数"
+          },
+          "max_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3650,
+            "default": 90,
+            "description": "单次时间段最大跨度（天）"
+          },
+          "max_items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "default": 500,
+            "description": "单次返回微博条数上限"
+          },
+          "max_calls": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "default": 30,
+            "description": "单次抓取最多调用 CLI 次数"
+          },
+          "budget_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 120000,
+            "description": "单次抓取时间预算（毫秒）"
+          },
+          "max_chars": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 500,
+            "description": "单条微博正文截断长度"
+          }
+        }
+      },
+      "images": {
+        "type": "object",
+        "description": "图片 CDN 下载",
+        "additionalProperties": false,
+        "default": {
+          "enabled": true,
+          "referer": "https://weibo.com/",
+          "max_bytes": 20971520,
+          "timeout_ms": 20000,
+          "retry_tvax": true
+        },
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "是否接管 sinaimg CDN 图片"
+          },
+          "referer": {
+            "type": "string",
+            "default": "https://weibo.com/",
+            "description": "下载图片时携带的 Referer"
+          },
+          "max_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 20971520,
+            "description": "单张图片大小上限（字节）"
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 20000,
+            "description": "单张图片下载超时（毫秒）"
+          },
+          "retry_tvax": {
+            "type": "boolean",
+            "default": true,
+            "description": "wx 前缀失败时回退 tvax 域名"
+          }
+        }
+      },
+      "cache_ttl_ms": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 60000,
+        "description": "取件结果缓存时长（毫秒，0 表示不缓存）"
+      },
+      "search": {
+        "type": "object",
+        "description": "weibo / weibo_hot 搜索源配置",
+        "additionalProperties": false,
+        "default": {
+          "enabled": false,
+          "category": "weibo",
+          "hot_category": "weibo_hot",
+          "limit": 10,
+          "timeout_ms": 30000,
+          "cache_ttl_ms": 60000,
+          "retry": 1
+        },
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "是否启用 weibo / weibo_hot 搜索源"
+          },
+          "category": {
+            "type": "string",
+            "default": "weibo",
+            "description": "普通搜索命中的类别名"
+          },
+          "hot_category": {
+            "type": "string",
+            "default": "weibo_hot",
+            "description": "热搜命中的类别名"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 10,
+            "description": "默认返回条数"
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 30000,
+            "description": "单次搜索超时（毫秒）"
+          },
+          "cache_ttl_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 60000,
+            "description": "搜索结果缓存时长（毫秒）"
+          },
+          "retry": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3,
+            "default": 1,
+            "description": "空结果重试次数（不含首次）"
+          }
+        }
+      }
+    }
+  }
+}

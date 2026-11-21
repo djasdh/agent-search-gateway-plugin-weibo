@@ -3,23 +3,29 @@
 import type { EngineProvider, EngineProviderContext } from "./sdk/engine.js";
 import { asObject, nonEmptyString, numberOr } from "./sdk/values.js";
 import { hasCategory } from "./sdk/category.js";
+import { resolveEngineConfig } from "./config.js";
 import { searchWeibo, searchWeiboHot } from "./search.js";
 
 const DEFAULT_COMMAND = "opencli";
 
-function commandOf(ctx: EngineProviderContext): string {
-  const raw = asObject(asObject(ctx.config.weibo).cli).command;
+/** V1 读 `config.weibo` / `config.search.weibo`，V2 读 `pluginConfig`；统一成一份合并配置。 */
+function configOf(ctx: EngineProviderContext): Record<string, unknown> {
+  return resolveEngineConfig(ctx);
+}
+
+function commandOf(config: Record<string, unknown>): string {
+  const raw = asObject(config.cli).command;
   // 只有「缺省」才回落到 opencli；显式空串表示未配置可用命令。
   if (raw === undefined) return DEFAULT_COMMAND;
   return typeof raw === "string" ? raw.trim() : "";
 }
 
-function searchWeiboConfig(ctx: EngineProviderContext): Record<string, unknown> {
-  return asObject(asObject(ctx.config.search).weibo);
+function searchWeiboConfig(config: Record<string, unknown>): Record<string, unknown> {
+  return asObject(config.search);
 }
 
-function categoriesOf(ctx: EngineProviderContext): { category: string; hotCategory: string } {
-  const weibo = searchWeiboConfig(ctx);
+function categoriesOf(config: Record<string, unknown>): { category: string; hotCategory: string } {
+  const weibo = searchWeiboConfig(config);
   return {
     category: nonEmptyString(weibo.category) ?? "weibo",
     hotCategory: nonEmptyString(weibo.hot_category) ?? "weibo_hot",
@@ -33,34 +39,38 @@ export const weiboProvider: EngineProvider = {
   kind: "gateway",
   displayName: "微博",
   authHint: "在 Chrome 登录 weibo.com 后重试。",
+  // V1 CLI 元数据；V2 宿主只用 pluginConfig。
   requires: ["config:weibo.enabled"],
   enabledPath: ["search", "weibo", "enabled"],
   routing: (ctx) => {
-    const { category, hotCategory } = categoriesOf(ctx);
+    const { category, hotCategory } = categoriesOf(configOf(ctx));
     return [`category:${category}`, `category:${hotCategory}`];
   },
   available: (ctx) => {
-    if (asObject(ctx.config.weibo).enabled !== true) return false;
-    return commandOf(ctx).length > 0;
+    const config = configOf(ctx);
+    if (config.enabled !== true) return false;
+    return commandOf(config).length > 0;
   },
-  enabled: (ctx) => searchWeiboConfig(ctx).enabled === true,
+  enabled: (ctx) => searchWeiboConfig(configOf(ctx)).enabled === true,
   runtime: {
     kind: "search",
     plan(categories, ctx) {
-      const { category, hotCategory } = categoriesOf(ctx);
+      const config = configOf(ctx);
+      const { category, hotCategory } = categoriesOf(config);
       const hot = hasCategory(categories, hotCategory);
       const only = !hot && hasCategory(categories, category);
       return hot || only ? { hot } : undefined;
     },
     search(query, options, ctx) {
-      const config = searchWeiboConfig(ctx);
+      const config = configOf(ctx);
+      const search = searchWeiboConfig(config);
       const opts = {
         limit: options.limit,
-        timeoutMs: numberOr(config.timeout_ms, 30_000),
-        retry: numberOr(config.retry, 1),
-        cacheTtlMs: numberOr(config.cache_ttl_ms, 60_000),
+        timeoutMs: numberOr(search.timeout_ms, 30_000),
+        retry: numberOr(search.retry, 1),
+        cacheTtlMs: numberOr(search.cache_ttl_ms, 60_000),
       };
-      const command = commandOf(ctx);
+      const command = commandOf(config);
       return options.hot ? searchWeiboHot(opts, command) : searchWeibo(query, opts, command);
     },
   },

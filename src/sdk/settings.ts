@@ -55,7 +55,8 @@ export interface SearchWeiboSettings {
 
 export interface FetchPluginSettings {
   fetch: FetchSettings;
-  weibo: WeiboSettings;
+  /** V1 宿主注入的平台配置；V2 宿主不提供，改用 `ctx.pluginConfig`。 */
+  weibo?: WeiboSettings;
 }
 
 export interface FetchPluginSecrets {

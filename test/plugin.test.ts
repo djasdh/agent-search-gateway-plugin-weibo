@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { fetch as plugin } from "../src/index.js";
-import { makeContext, tmpDir, writeCli } from "./helpers.js";
+import type { FetchPluginContext } from "../src/sdk/fetch-plugin.js";
+import { makeContext, makePluginContext, makeWeiboConfig, tmpDir, writeCli } from "./helpers.js";
 
 afterEach(() => {
   delete process.env.FAKE_LOG;
@@ -71,5 +72,65 @@ describe("plugin fetch", () => {
     await plugin.fetch(url, config);
     await plugin.fetch(url, config);
     expect(readFileSync(log, "utf8").trim().split("\n")).toHaveLength(1);
+  });
+});
+
+describe("V2 pluginConfig", () => {
+  it("只有 pluginConfig、没有 settings.weibo 时 enabled/available/fetch 正常", async () => {
+    const cli = writeCli();
+    const ctx = makePluginContext(makeWeiboConfig(cli));
+    expect(plugin.enabled?.(ctx)).toBe(true);
+    expect(plugin.available?.(ctx)).toBe(true);
+
+    const result = await plugin.fetch(new URL("https://weibo.com/1/V2Only?weibo=post"), ctx);
+    expect(result.ok).toBe(true);
+    expect(result.contentType).toBe("text/markdown");
+    expect(result.bytes?.toString("utf8")).toContain("正文内容");
+  });
+
+  it("只有旧 settings.weibo 时行为不变", async () => {
+    const ctx = makeContext(writeCli());
+    expect(plugin.enabled?.(ctx)).toBe(true);
+    expect(plugin.available?.(ctx)).toBe(true);
+    expect(plugin.enabled?.(makeContext(writeCli(), { enabled: false }))).toBe(false);
+
+    const result = await plugin.fetch(new URL("https://weibo.com/1/LegacyOnly?weibo=post"), ctx);
+    expect(result.ok).toBe(true);
+  });
+
+  it("局部 pluginConfig 与完整 legacy settings 深合并：cli/images 仍在", async () => {
+    const cli = writeCli();
+    const ctx = makeContext(cli, {}, { enabled: true });
+    // cli 完全来自 legacy settings；pluginConfig 只覆盖 enabled。
+    expect(plugin.enabled?.(ctx)).toBe(true);
+    expect(plugin.available?.(ctx)).toBe(true);
+
+    const result = await plugin.fetch(new URL("https://weibo.com/1/Merged?weibo=post"), ctx);
+    expect(result.ok).toBe(true);
+    expect(result.bytes?.toString("utf8")).toContain("正文内容");
+  });
+
+  it("pluginConfig 优先于 legacy settings", async () => {
+    const cli = writeCli();
+    const ctx = makeContext("/nonexistent-opencli", {}, { enabled: true, cli: { command: cli } });
+    expect(plugin.available?.(ctx)).toBe(true);
+
+    const result = await plugin.fetch(new URL("https://weibo.com/1/Override?weibo=post"), ctx);
+    expect(result.ok).toBe(true);
+  });
+
+  it("两份配置都为空时返回明确错误，不抛异常", async () => {
+    const ctx: FetchPluginContext = {
+      settings: { fetch: { timeout_ms: 15000, max_bytes: 1024 * 1024, user_agent: "" } },
+      secrets: { bilibili: { http: { token: "" } } },
+      getSecret: () => undefined,
+    };
+    expect(plugin.enabled?.(ctx)).toBe(false);
+    expect(plugin.available?.(ctx)).toBe(false);
+
+    const result = await plugin.fetch(new URL("https://weibo.com/1/Empty?weibo=post"), ctx);
+    expect(result.ok).toBe(false);
+    expect(result.errorCode).toBe("WEIBO_UNAVAILABLE");
+    expect(result.errorMessage).toContain("未配置");
   });
 });
