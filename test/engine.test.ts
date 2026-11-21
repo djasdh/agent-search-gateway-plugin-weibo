@@ -23,7 +23,8 @@ describe("engine 元数据", () => {
 
   it("同时声明 V1 与 V2 启用路径（0.4.0+ 用 V2）", () => {
     expect(engine.requires).toEqual(["config:weibo.enabled"]);
-    expect(engine.requiresV2).toEqual(["config:extensions.weibo.config.search.enabled"]);
+    // 前置条件是插件总开关，不是即将被 enable 的 search.enabled。
+    expect(engine.requiresV2).toEqual(["config:extensions.weibo.config.enabled"]);
     expect(engine.enabledPath).toEqual(["search", "weibo", "enabled"]);
     expect(engine.enabledPathV2).toEqual([
       "extensions",

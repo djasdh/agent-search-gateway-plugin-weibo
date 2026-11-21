@@ -43,7 +43,8 @@ export const weiboProvider: EngineProvider = {
   requires: ["config:weibo.enabled"],
   enabledPath: ["search", "weibo", "enabled"],
   // V2：0.4.0+ 已删除 gateway.yaml 的 search.weibo，开关在 extensions.weibo.config。
-  requiresV2: ["config:extensions.weibo.config.search.enabled"],
+  // requiresV2 必须指向插件总开关；不能指向 search.enabled 本身，否则引擎永远无法被启用。
+  requiresV2: ["config:extensions.weibo.config.enabled"],
   enabledPathV2: ["extensions", "weibo", "config", "search", "enabled"],
   routing: (ctx) => {
     const { category, hotCategory } = categoriesOf(configOf(ctx));

@@ -13,7 +13,7 @@ test("asg-extension.json 是有效的 V2 manifest", () => {
   assert.equal(manifest.id, "weibo");
   assert.equal(manifest.api_version, 2);
   assert.equal(manifest.version, pkg.version);
-  assert.equal(manifest.version, "0.2.1");
+  assert.equal(manifest.version, "0.2.2");
   assert.equal(manifest.entry, "index.mjs");
   assert.ok(manifest.provides.includes("fetch"));
   assert.ok(manifest.provides.includes("search"));
@@ -39,7 +39,7 @@ test("asg-plugin.json 保留 V1 且版本一致", () => {
   assert.equal(legacy.id, "weibo");
   assert.equal(legacy.api_version, 1);
   assert.equal(legacy.version, readJson("package.json").version);
-  assert.equal(legacy.version, "0.2.1");
+  assert.equal(legacy.version, "0.2.2");
 });
 
 /** 构建产物冒烟测试：确认 index.mjs 可加载且 fetch / engine 都存在。 */
