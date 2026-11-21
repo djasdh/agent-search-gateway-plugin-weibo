@@ -83,13 +83,30 @@ export interface EngineProvider {
   kind: EngineKind;
   displayName: string;
   routing(ctx: EngineProviderContext): string[];
+  /**
+   * V1 前置条件（`gateway.yaml` 顶层段，如 `config:weibo.enabled`）。
+   * 0.3.x 宿主使用；0.4.0+ 优先读 `requiresV2`。
+   */
   requires?: string[];
+  /** V2 前置条件（`extensions.<id>.config` 下的路径），0.4.0+ 宿主优先使用。 */
+  requiresV2?: string[];
   /** 前置条件是否满足（密钥 / 上游能力开关）；不包含引擎自身的 enabled。 */
   available(ctx: EngineProviderContext): boolean;
   /** 引擎自身的启用状态；缺省视为 true。 */
   enabled?(ctx: EngineProviderContext): boolean;
-  /** gateway.search 源的启用布尔值在 gateway.yaml 中的路径。 */
+  /**
+   * V1 `gateway.search` 源启用布尔值在 `gateway.yaml` 中的路径
+   * （如 `search.weibo.enabled`）。
+   * 0.3.x 宿主使用；0.4.0+ 优先读 `enabledPathV2`。
+   */
   enabledPath?: readonly string[];
+  /**
+   * V2 `gateway.search` 源启用布尔值的路径（相对 `extensions.<id>.config`），
+   * 如 `extensions.weibo.config.search.enabled` 对应
+   * `["extensions", "weibo", "config", "search", "enabled"]`。
+   * 0.4.0+ 宿主优先使用；旧宿主可忽略。
+   */
+  enabledPathV2?: readonly string[];
   runtime?: EngineRuntime;
   /** auth 错误时追加的提示。 */
   authHint?: string;

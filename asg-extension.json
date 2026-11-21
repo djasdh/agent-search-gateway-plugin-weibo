@@ -1,7 +1,7 @@
 {
   "id": "weibo",
   "name": "Weibo",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "api_version": 2,
   "description": "微博插件：帖子/评论/用户/时间段取件，以及 weibo / weibo_hot 搜索源",
   "provides": ["search", "fetch"],

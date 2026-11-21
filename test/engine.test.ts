@@ -21,6 +21,19 @@ describe("engine 元数据", () => {
     expect(engine.requires).toContain("config:weibo.enabled");
   });
 
+  it("同时声明 V1 与 V2 启用路径（0.4.0+ 用 V2）", () => {
+    expect(engine.requires).toEqual(["config:weibo.enabled"]);
+    expect(engine.requiresV2).toEqual(["config:extensions.weibo.config.search.enabled"]);
+    expect(engine.enabledPath).toEqual(["search", "weibo", "enabled"]);
+    expect(engine.enabledPathV2).toEqual([
+      "extensions",
+      "weibo",
+      "config",
+      "search",
+      "enabled",
+    ]);
+  });
+
   it("available 取决于 weibo.enabled 与 CLI 命令", () => {
     expect(engine.available(makeEngineContext())).toBe(true);
     expect(engine.available(makeEngineContext({ weiboEnabled: false }))).toBe(false);

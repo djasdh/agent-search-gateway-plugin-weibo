@@ -11,7 +11,7 @@
 ## 安装
 
 ```bash
-asg extensions install djasdh/agent-search-gateway-plugin-weibo@0.2.0
+asg extensions install djasdh/agent-search-gateway-plugin-weibo@0.2.1
 asg extensions list
 ```
 
@@ -52,6 +52,26 @@ asg extensions config weibo --set enabled=true
 asg extensions config weibo --set search.enabled=true
 asg extensions config weibo --describe
 ```
+
+### 启用搜索源
+
+agent-search-gateway **0.4.0+** 已删除 `gateway.yaml` 的 `search.weibo` 段，搜索源开关
+改由扩展私有配置承载。以下两种方式等价，都会写 `extensions.weibo.config.search.enabled`：
+
+```bash
+asg engines enable gateway.search:weibo
+# 或直接改扩展配置
+asg extensions config weibo --set search.enabled=true
+```
+
+插件在 `engine` 上同时声明：
+
+| 字段 | 值 | 适用宿主 |
+| --- | --- | --- |
+| `requires` / `enabledPath` | `config:weibo.enabled` / `search.weibo.enabled` | 0.3.x |
+| `requiresV2` / `enabledPathV2` | `config:extensions.weibo.config.search.enabled` / `extensions.weibo.config.search.enabled` | 0.4.0+（优先） |
+
+**0.3.x** 继续使用顶层 `search.weibo.enabled`（见下文旧配置示例），`asg engines enable` 会写回该路径。
 
 旧配置由 0.3.x 迁移脚本自动搬到新位置：
 
@@ -118,7 +138,7 @@ npm run typecheck  # tsc --noEmit
 ## 发版
 
 1. 同步修改 `asg-extension.json`、`asg-plugin.json` 与 `package.json` 的版本号。
-2. `git tag v0.2.0 && git push origin v0.2.0`。
+2. `git tag v0.2.1 && git push origin v0.2.1`。
 3. GitHub Actions 执行 `npm ci` / `npm run typecheck` / `npm test` / `npm run build`，
    生成 `SHA256SUMS` 并创建 Release（`index.mjs`、`asg-extension.json`、
    `asg-plugin.json`、`SHA256SUMS`）。

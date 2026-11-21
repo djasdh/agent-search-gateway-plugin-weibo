@@ -39,9 +39,12 @@ export const weiboProvider: EngineProvider = {
   kind: "gateway",
   displayName: "微博",
   authHint: "在 Chrome 登录 weibo.com 后重试。",
-  // V1 CLI 元数据；V2 宿主只用 pluginConfig。
+  // V1 元数据给 0.3.x 宿主（顶层 `weibo` / `search.weibo`）。
   requires: ["config:weibo.enabled"],
   enabledPath: ["search", "weibo", "enabled"],
+  // V2：0.4.0+ 已删除 gateway.yaml 的 search.weibo，开关在 extensions.weibo.config。
+  requiresV2: ["config:extensions.weibo.config.search.enabled"],
+  enabledPathV2: ["extensions", "weibo", "config", "search", "enabled"],
   routing: (ctx) => {
     const { category, hotCategory } = categoriesOf(configOf(ctx));
     return [`category:${category}`, `category:${hotCategory}`];
